@@ -144,6 +144,22 @@ found:
   return p;
 }
 
+//collect the number of processes for lab2 syscall
+uint64 nproc_get(void)
+{
+  struct proc *p;
+  uint64 nproc = 0;
+
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state != UNUSED) {
+      nproc++;
+    }
+    release(&p->lock);    
+  }
+  return nproc;
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -288,6 +304,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->tracemask = p->tracemask;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
