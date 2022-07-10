@@ -75,12 +75,53 @@ sys_sleep(void)
   return 0;
 }
 
-
 #ifdef LAB_PGTBL
 int
 sys_pgaccess(void)
 {
   // lab pgtbl: your code here.
+
+  /* three input argument */
+  //1, start virtual address to check
+  //2, number page to check 
+  //3, a user address to a buffer to store the results into a bitmask
+
+  /* find the PTE corresponds to the virtual address va,  */
+  uint64 va=0;
+  int num=0;
+  uint64 buffer=0;
+  uint64 bitmap = 0;
+  pte_t* pte;
+  
+  if (argaddr(0, &va) < 0 ||
+      argint(1, &num)        < 0 ||
+      argaddr(2, &buffer)    < 0) {
+    printf("intput arg error!\n");
+    return -1;
+  }
+  
+  /* check condition */
+  /* upper limit on the number of pages that can be scanned, we set 64 */
+  if (va + num >= MAXVA || 
+      num > 64) {
+    printf("intput arg error!\n");
+    return -1;
+  }
+  
+  for (int i = 0; i < num; i++) {
+    pte = walk(myproc()->pagetable, va, 0);
+    if (*pte & PTE_A) {
+      bitmap |= 1 << i;
+      *pte &= ~PTE_A;
+    }
+    va += PGSIZE;
+  }
+
+  if (copyout(myproc()->pagetable, buffer, (char *)&bitmap, num>>3) < 0) {
+    printf("copy out error occur!\n");
+    return -1;
+  }
+
   return 0;
 }
 #endif
