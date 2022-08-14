@@ -10,6 +10,7 @@ struct spinlock tickslock;
 uint ticks;
 
 extern char trampoline[], uservec[], userret[];
+extern void* memcpy(void *dst, const void *src, uint n);
 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
@@ -77,9 +78,23 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
-    yield();
+  if(which_dev == 2) {
+    if (p->start_flag != 0 && p->interval != 0) {
+      (p->ticks_cnt)++;
+      if (p->ticks_cnt == p->interval) {
+        // call user sigalarm handler
+        p->ticks_cnt = 0;
+        // save trapframe
+        memcpy((void *)p->ureg, (const void *)p->trapframe, sizeof(struct trapframe));
 
+        p->trapframe->epc = (uint64)(p->handler);
+        p->start_flag = 0;
+        // goto ret;
+      }
+    }
+    yield();
+  }
+// ret:
   usertrapret();
 }
 
